@@ -1,0 +1,21 @@
+{
+  "name": "sybsec-data-exfiltration",
+  "displayName": "Data Exfiltration",
+  "titlePrefix": "[EXFIL]",
+  "severity": 3,
+  "tlp": 3, "pap": 2,
+  "description": "Auto-created from Suricata ET match or bytes_out > 500MB/10min (Wazuh rule 100040). SOAR Playbook 4 blocks egress and captures PCAP.",
+  "tags": ["sybsec", "exfiltration", "T1041", "T1048"],
+  "tasks": [
+    { "title": "Triage: confirm volume + destination", "group": "triage" },
+    { "title": "Contain: block egress at pfSense", "group": "contain" },
+    { "title": "Capture: full PCAP via Arkime API", "group": "forensics" },
+    { "title": "Create DFIR-IRIS investigation", "group": "forensics" },
+    { "title": "Assess: what data left, to where", "group": "investigate" }
+  ],
+  "customFields": {
+    "source-ip": { "type": "string", "mandatory": true },
+    "destination-ip": { "type": "string", "mandatory": true },
+    "bytes-out": { "type": "integer", "mandatory": false }
+  }
+}

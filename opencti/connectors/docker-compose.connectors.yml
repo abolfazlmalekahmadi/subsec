@@ -1,0 +1,35 @@
+# OpenCTI connectors — run alongside an OpenCTI core deployment.
+# `docker compose --env-file connectors.env -f docker-compose.connectors.yml up -d`
+# NOTE: OpenCTI core (platform + redis + elastic + minio + rabbitmq) is a heavy
+# stack of its own; deploy it from the official opencti/docker repo, then attach
+# these connectors. See STATUS.md — not part of the dev single-box compose.
+services:
+  connector-mitre:
+    image: opencti/connector-mitre:6.2.0
+    restart: always
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_MITRE_ID}
+      - CONNECTOR_TYPE=${CONNECTOR_MITRE_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_MITRE_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_MITRE_SCOPE}
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - MITRE_INTERVAL=${CONNECTOR_MITRE_INTERVAL}
+
+  connector-misp:
+    image: opencti/connector-misp:6.2.0
+    restart: always
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_MISP_ID}
+      - CONNECTOR_TYPE=${CONNECTOR_MISP_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_MISP_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_MISP_SCOPE}
+      - MISP_URL=${MISP_URL}
+      - MISP_KEY=${MISP_KEY}
+      - MISP_SSL_VERIFY=${MISP_SSL_VERIFY}
+      - MISP_IMPORT_FROM_DATE=${MISP_IMPORT_FROM_DATE}
+      - MISP_CREATE_REPORTS=${MISP_CREATE_REPORTS}
+      - MISP_INTERVAL=${MISP_INTERVAL}

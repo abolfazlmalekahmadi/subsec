@@ -1,0 +1,127 @@
+<!--
+  sybsec custom Wazuh rules.
+  ID range 100000-100100 is reserved for local rules (Wazuh convention).
+  Each rule below maps to a Caldera/Atomic Red Team test (see tests/detection_tests)
+  so detection coverage can be validated automatically.
+-->
+<group name="sybsec,local,">
+
+  <!-- ====================================================================
+       Brute force / credential stuffing
+       Maps to: Atomic T1110 (Brute Force). Success criterion: alert < 30s.
+       Built on top of Wazuh's auth-failure rule 5551/5712.
+  ===================================================================== -->
+  <!-- Chain on Wazuh's built-in brute-force composites (5712 sshd, 5720 multiple
+       failures, 5763 pam) rather than duplicate the threshold logic. This adds
+       the sybsec SOAR hook + tag that Shuffle Playbook 2 triggers on. -->
+  <rule id="100010" level="10">
+    <if_sid>5712,5720,5758,5763</if_sid>
+    <description>sybsec: Brute force confirmed from $(srcip) - trigger Playbook 2</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,bruteforce,sybsec_soar,</group>
+  </rule>
+
+  <rule id="100011" level="12" frequency="3" timeframe="600">
+    <if_matched_sid>100010</if_matched_sid>
+    <same_source_ip />
+    <description>sybsec: Sustained brute force from $(srcip) - escalate</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>bruteforce,escalation,</group>
+  </rule>
+
+  <!-- A successful login immediately after the brute-force pattern -->
+  <rule id="100012" level="13">
+    <if_matched_sid>100010</if_matched_sid>
+    <if_sid>5715</if_sid>
+    <same_source_ip />
+    <description>sybsec: Successful auth from $(srcip) after brute force - likely compromise</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1078</id>
+    </mitre>
+    <group>bruteforce,authentication_success,</group>
+  </rule>
+
+  <!-- ====================================================================
+       Malware / known-bad file hash (decoded from custom integrations)
+       Maps to: Atomic T1204 / EICAR drop. Trigger for SOAR Playbook 1.
+  ===================================================================== -->
+  <rule id="100002" level="12">
+    <decoded_as>sybsec_malware</decoded_as>
+    <field name="verdict">malicious</field>
+    <description>sybsec: Malware detected on $(hostname) - file $(file) ($(sha256))</description>
+    <mitre>
+      <id>T1204</id>
+    </mitre>
+    <group>malware,</group>
+  </rule>
+
+  <!-- MISP hash match appended by custom-misp integration (threat_intel field) -->
+  <rule id="100020" level="13">
+    <field name="threat_intel.misp.matched">true</field>
+    <description>sybsec: MISP IoC match ($(threat_intel.misp.type)) - auto-escalate CRITICAL</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>threat_intel,misp,</group>
+  </rule>
+
+  <!-- ====================================================================
+       Lateral movement (Sysmon-fed)
+       Maps to: Atomic T1021 (Remote Services).
+  ===================================================================== -->
+  <rule id="100030" level="11">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)(psexec|wmic|winrm|wsmprovhost)\.exe</field>
+    <description>sybsec: Possible lateral movement tool execution - $(win.eventdata.image)</description>
+    <mitre>
+      <id>T1021</id>
+      <id>T1570</id>
+    </mitre>
+    <group>lateral_movement,sysmon,</group>
+  </rule>
+
+  <!-- ====================================================================
+       Data exfiltration (correlate with Suricata / Zeek volume)
+       Maps to: bytes_out threshold; Trigger for SOAR Playbook 4.
+  ===================================================================== -->
+  <rule id="100040" level="12">
+    <decoded_as>sybsec_netflow</decoded_as>
+    <field name="bytes_out" type="pcre2">^\d{9,}$</field>
+    <description>sybsec: Large outbound transfer (>500MB) from $(srcip) - possible exfiltration</description>
+    <mitre>
+      <id>T1041</id>
+      <id>T1048</id>
+    </mitre>
+    <group>exfiltration,</group>
+  </rule>
+
+  <!-- ====================================================================
+       ML anomaly bridge - Wazuh ingests anomaly docs from the ML service
+       Maps to: SOAR Playbook 3 (anomaly_score > 0.85).
+  ===================================================================== -->
+  <rule id="100050" level="10">
+    <decoded_as>sybsec_anomaly</decoded_as>
+    <field name="is_anomaly">true</field>
+    <description>sybsec: ML anomaly detected (score $(anomaly_score)) - $(reason)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>ml_anomaly,</group>
+  </rule>
+
+  <rule id="100051" level="13">
+    <if_sid>100050</if_sid>
+    <field name="anomaly_score" type="pcre2">^(0\.(8[5-9]|9\d)|1\.0)</field>
+    <description>sybsec: High-confidence ML anomaly (score >= 0.85) - create case</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>ml_anomaly,escalation,</group>
+  </rule>
+
+</group>

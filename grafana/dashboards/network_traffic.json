@@ -1,0 +1,37 @@
+{
+  "uid": "sybsec-network-traffic",
+  "title": "sybsec — Network Traffic",
+  "tags": ["sybsec", "network"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Bytes out by source (Zeek conn.log)",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "event.module:zeek",
+          "metrics": [ { "type": "sum", "field": "source.bytes", "id": "1" } ],
+          "bucketAggs": [
+            { "type": "terms", "field": "source.ip", "id": "2", "settings": { "size": "10" } },
+            { "type": "date_histogram", "field": "@timestamp", "id": "3", "settings": { "interval": "5m" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "piechart",
+      "title": "Suricata alerts by category",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "targets": [ { "refId": "A", "query": "event.module:suricata AND event.kind:alert", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [ { "type": "terms", "field": "rule.category", "id": "2", "settings": { "size": "10" } } ] } ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Core API
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+
+# ML / anomaly detection
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.2
+pyod==2.0.2
+adtk==0.6.2
+joblib==1.4.2
+
+# Integrations
+elasticsearch==8.15.0
+confluent-kafka==2.5.3

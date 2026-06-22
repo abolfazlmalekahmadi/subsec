@@ -1,0 +1,20 @@
+{
+  "name": "sybsec-lateral-movement",
+  "displayName": "Lateral Movement",
+  "titlePrefix": "[LATERAL]",
+  "severity": 3,
+  "tlp": 2, "pap": 2,
+  "description": "Auto-created from Wazuh rule 100030 (psexec/wmic/winrm). Pull OpenCTI ATT&CK context for T1021/T1570.",
+  "tags": ["sybsec", "lateral-movement", "T1021", "T1570"],
+  "tasks": [
+    { "title": "Triage: identify source + target hosts", "group": "triage" },
+    { "title": "Enrich: OpenCTI ATT&CK techniques + related cases", "group": "enrich" },
+    { "title": "Scope: map blast radius (auth graph, Sysmon EID 1/3)", "group": "investigate" },
+    { "title": "Contain: isolate involved hosts", "group": "contain" },
+    { "title": "Escalate to DFIR-IRIS for timeline", "group": "forensics" }
+  ],
+  "customFields": {
+    "source-host": { "type": "string", "mandatory": true },
+    "target-host": { "type": "string", "mandatory": true }
+  }
+}

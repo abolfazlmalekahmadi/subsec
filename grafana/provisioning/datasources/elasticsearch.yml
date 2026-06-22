@@ -1,0 +1,20 @@
+# Auto-provision the Elasticsearch datasource for sybsec dashboards.
+apiVersion: 1
+datasources:
+  - name: sybsec-es
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "security-*"
+    jsonData:
+      timeField: "@timestamp"
+      esVersion: "8.0.0"
+      maxConcurrentShardRequests: 5
+      logMessageField: message
+      logLevelField: event.severity
+    basicAuth: true
+    basicAuthUser: elastic
+    secureJsonData:
+      basicAuthPassword: ${ELASTIC_PASSWORD}
+    isDefault: true
+    editable: true

@@ -1,0 +1,35 @@
+{
+  "uid": "sybsec-anomaly-scores",
+  "title": "sybsec — ML Anomaly Scores",
+  "tags": ["sybsec", "ml"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Mean anomaly score over time",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "event.module:ml-anomaly",
+          "metrics": [ { "type": "avg", "field": "anomaly_score", "id": "1" } ],
+          "bucketAggs": [ { "type": "date_histogram", "field": "@timestamp", "id": "2", "settings": { "interval": "auto" } } ]
+        }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 0.85 } ] } } }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Recent anomalies (score >= threshold)",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "targets": [ { "refId": "A", "query": "is_anomaly:true", "metrics": [ { "type": "raw_document", "id": "1", "settings": { "size": "50" } } ], "bucketAggs": [] } ]
+    }
+  ]
+}

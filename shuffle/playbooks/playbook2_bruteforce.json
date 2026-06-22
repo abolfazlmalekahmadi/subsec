@@ -1,0 +1,31 @@
+{
+  "name": "PB2 — Brute Force Attack",
+  "description": "Trigger: Wazuh rule 100010/5551. AbuseIPDB -> block IP at pfSense -> lock account -> case HIGH -> notify manager.",
+  "id": "sybsec-pb2-bruteforce",
+  "is_valid": true,
+  "triggers": [ { "name": "wazuh_webhook", "type": "webhook", "parameters": { "path": "/api/v1/hooks/sybsec-bruteforce" } } ],
+  "actions": [
+    { "id": "a1", "label": "Extract", "app_name": "Shuffle Tools", "name": "parse_json",
+      "parameters": { "input": "$exec", "fields": "data.srcip,data.dstuser,agent.id" } },
+    { "id": "a2", "label": "Cortex AbuseIPDB", "app_name": "Cortex", "name": "run_analyzer",
+      "parameters": { "analyzer": "AbuseIPDB_1_0", "data_type": "ip", "data": "$a1.data.srcip" } },
+    { "id": "a3", "label": "Block IP at pfSense", "app_name": "pfSense", "name": "add_firewall_alias",
+      "parameters": { "alias": "sybsec_blocklist", "ip": "$a1.data.srcip", "api_key": "$PFSENSE_API_KEY" },
+      "conditions": [ { "source": "$a2.abuseConfidenceScore", "condition": "larger than", "destination": "50" } ] },
+    { "id": "a4", "label": "Lock account (LDAP)", "app_name": "LDAP", "name": "disable_user",
+      "parameters": { "user": "$a1.data.dstuser", "bind_dn": "$LDAP_BIND_DN", "password": "$LDAP_BIND_PW" },
+      "conditions": [ { "source": "$a2.abuseConfidenceScore", "condition": "larger than", "destination": "50" } ] },
+    { "id": "a5", "label": "Create TheHive case", "app_name": "TheHive", "name": "create_case",
+      "parameters": { "template": "sybsec-bruteforce", "severity": 2,
+        "title": "[BRUTEFORCE] $a1.data.srcip -> $a1.data.dstuser",
+        "customFields": "{\"source-ip\":\"$a1.data.srcip\",\"target-account\":\"$a1.data.dstuser\",\"abuseipdb-score\":$a2.abuseConfidenceScore}" } },
+    { "id": "a6", "label": "Email user's manager", "app_name": "Email", "name": "send_email",
+      "parameters": { "to": "$MANAGER_EMAIL", "subject": "Account $a1.data.dstuser targeted by brute force",
+        "body": "Source $a1.data.srcip (AbuseIPDB $a2.abuseConfidenceScore). Case $a5.caseId. Account locked." } }
+  ],
+  "branches": [
+    { "source": "a1", "destination": "a2" }, { "source": "a2", "destination": "a3" },
+    { "source": "a3", "destination": "a4" }, { "source": "a4", "destination": "a5" },
+    { "source": "a5", "destination": "a6" }
+  ]
+}

@@ -1,0 +1,25 @@
+# sybsec Wazuh-alert forwarder: tails the Wazuh manager's alerts.json and
+# publishes each raw alert line to Kafka topic `wazuh-events`. Logstash's
+# wazuh pipeline (codec => json) then normalizes to ECS and indexes to
+# security-wazuh-*. We forward the raw line (codec.format) so Logstash parses
+# the original Wazuh JSON directly, avoiding Filebeat's envelope double-encoding.
+filebeat.inputs:
+  - type: filestream
+    id: wazuh-alerts
+    enabled: true
+    paths:
+      - /wazuh-logs/alerts/alerts.json
+    # No parser: keep the raw JSON line in `message`.
+
+output.kafka:
+  hosts: ["kafka:9092"]
+  topic: "wazuh-events"
+  required_acks: 1
+  compression: lz4
+  max_message_bytes: 1000000
+  codec.format:
+    string: '%{[message]}'
+
+logging.level: info
+monitoring.enabled: false
+filebeat.registry.path: /usr/share/filebeat/data/registry

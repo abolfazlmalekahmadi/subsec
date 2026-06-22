@@ -1,0 +1,34 @@
+# Secrets & local config
+.env
+*.env.local
+secrets/
+*.key
+*.pem
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Data / runtime volumes
+data/
+volumes/
+pcap/
+models/*.joblib
+ml/anomaly_service/models/artifacts/
+
+# Logs
+*.log
+logs/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store

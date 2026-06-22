@@ -1,0 +1,27 @@
+{
+  "name": "PB4 — Data Exfiltration Suspected",
+  "description": "Trigger: Suricata ET rule match OR bytes_out > 500MB in 10min (Wazuh 100040). Block egress -> capture PCAP -> DFIR-IRIS case -> escalate CRITICAL in TheHive.",
+  "id": "sybsec-pb4-exfiltration",
+  "is_valid": true,
+  "triggers": [ { "name": "exfil_webhook", "type": "webhook", "parameters": { "path": "/api/v1/hooks/sybsec-exfil" } } ],
+  "actions": [
+    { "id": "a1", "label": "Extract flow", "app_name": "Shuffle Tools", "name": "parse_json",
+      "parameters": { "input": "$exec", "fields": "data.srcip,data.dstip,data.bytes_out,agent.id" } },
+    { "id": "a2", "label": "Block egress at pfSense", "app_name": "pfSense", "name": "add_firewall_rule",
+      "parameters": { "action": "block", "direction": "out", "source": "$a1.data.srcip", "destination": "$a1.data.dstip", "api_key": "$PFSENSE_API_KEY" } },
+    { "id": "a3", "label": "Capture PCAP via Arkime", "app_name": "Arkime", "name": "export_pcap",
+      "parameters": { "expression": "ip.src == $a1.data.srcip && ip.dst == $a1.data.dstip", "start": "-10m", "api_key": "$ARKIME_API_KEY" } },
+    { "id": "a4", "label": "Create DFIR-IRIS investigation", "app_name": "DFIR-IRIS", "name": "create_case",
+      "parameters": { "name": "[EXFIL] $a1.data.srcip -> $a1.data.dstip", "template": "exfiltration-forensics",
+        "evidence": "$a3.pcap_url", "api_key": "$IRIS_API_KEY" } },
+    { "id": "a5", "label": "Create/Escalate TheHive case CRITICAL", "app_name": "TheHive", "name": "create_case",
+      "parameters": { "template": "sybsec-data-exfiltration", "severity": 3,
+        "title": "[EXFIL] $a1.data.bytes_out bytes $a1.data.srcip -> $a1.data.dstip",
+        "customFields": "{\"source-ip\":\"$a1.data.srcip\",\"destination-ip\":\"$a1.data.dstip\",\"bytes-out\":$a1.data.bytes_out}",
+        "links": "iris:$a4.caseId" } }
+  ],
+  "branches": [
+    { "source": "a1", "destination": "a2" }, { "source": "a2", "destination": "a3" },
+    { "source": "a3", "destination": "a4" }, { "source": "a4", "destination": "a5" }
+  ]
+}

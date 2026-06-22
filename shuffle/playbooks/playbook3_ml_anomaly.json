@@ -1,0 +1,29 @@
+{
+  "name": "PB3 — ML Anomaly Detected",
+  "description": "Trigger: anomaly_score > 0.85 from ml-anomaly (Wazuh rule 100051). Context -> OpenCTI ATT&CK -> MISP IoCs -> case -> page on-call.",
+  "id": "sybsec-pb3-ml-anomaly",
+  "is_valid": true,
+  "triggers": [ { "name": "anomaly_webhook", "type": "webhook", "parameters": { "path": "/api/v1/hooks/sybsec-anomaly" } } ],
+  "actions": [
+    { "id": "a1", "label": "Extract anomaly", "app_name": "Shuffle Tools", "name": "parse_json",
+      "parameters": { "input": "$exec", "fields": "anomaly_score,reason,top_features,source.ip,user.name,host.name" } },
+    { "id": "a2", "label": "Wazuh host/user context", "app_name": "Wazuh", "name": "get_agent_context",
+      "parameters": { "host": "$a1.host.name", "user": "$a1.user.name", "window": "24h" } },
+    { "id": "a3", "label": "OpenCTI ATT&CK techniques", "app_name": "OpenCTI", "name": "graphql_query",
+      "parameters": { "query": "attackPatterns(search:\"$a1.top_features\"){edges{node{x_mitre_id name}}}", "token": "$OPENCTI_TOKEN" } },
+    { "id": "a4", "label": "MISP related IoCs", "app_name": "MISP", "name": "search",
+      "parameters": { "value": "$a1.source.ip", "key": "$MISP_API_KEY" } },
+    { "id": "a5", "label": "Create TheHive case", "app_name": "TheHive", "name": "create_case",
+      "parameters": { "template": "sybsec-anomalous-behavior", "severity": 2,
+        "title": "[ANOMALY] $a1.host.name score $a1.anomaly_score",
+        "description": "Reason: $a1.reason\\nATT&CK: $a3.results\\nMISP: $a4.results",
+        "customFields": "{\"anomaly-score\":$a1.anomaly_score,\"top-features\":\"$a1.top_features\",\"host\":\"$a1.host.name\"}" } },
+    { "id": "a6", "label": "Page on-call", "app_name": "PagerDuty", "name": "trigger_incident",
+      "parameters": { "routing_key": "$PAGERDUTY_KEY", "summary": "ML anomaly $a1.anomaly_score on $a1.host.name", "severity": "warning", "links": "$a5.caseUrl" } }
+  ],
+  "branches": [
+    { "source": "a1", "destination": "a2" }, { "source": "a2", "destination": "a3" },
+    { "source": "a3", "destination": "a4" }, { "source": "a4", "destination": "a5" },
+    { "source": "a5", "destination": "a6" }
+  ]
+}

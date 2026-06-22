@@ -1,0 +1,249 @@
+# =============================================================================
+# sybsec — DEV-SCALE single-node stack. Boots on one host (≥16 GB RAM free).
+#
+# This is NOT the production topology. Production (3-node ES, 3-broker Kafka,
+# Malcolm, MISP/OpenCTI/TheHive/Cortex) targets Kubernetes/Helm — see STATUS.md.
+#
+# Profiles:
+#   (default)  core    : elasticsearch, kibana, kafka, logstash, ml-anomaly, grafana, suricata
+#   wazuh              : wazuh single-node (indexer + manager + dashboard) — needs certs (see scripts/deploy.sh)
+#
+# Usage: ./scripts/deploy.sh up   (wraps `docker compose up -d` + health waits)
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+networks:
+  sybsec:
+    driver: bridge
+
+volumes:
+  es-data:
+  kafka-data:
+  grafana-data:
+  ml-models:
+  wazuh-indexer-data:
+  wazuh-manager-data:
+
+services:
+  # --- Layer 2: storage / indexing ------------------------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-8.15.0}
+    container_name: sybsec-elasticsearch
+    restart: unless-stopped
+    environment:
+      - node.name=es01
+      - cluster.name=${CLUSTER_NAME:-sybsec-soc}
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false        # dev only; TLS in prod (Helm)
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme_elastic}
+      - "ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms2g -Xmx2g}"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    networks: [sybsec]
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u elastic:${ELASTIC_PASSWORD:-changeme_elastic} http://localhost:9200/_cluster/health | grep -qE 'green|yellow'"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.15.0}
+    container_name: sybsec-kibana
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:-changeme_kibana}
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    networks: [sybsec]
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status | grep -q available"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+
+  # --- Layer 1: message bus -------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: sybsec-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-sybsec-kraft-cluster-0001}
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports:
+      - "${KAFKA_EXTERNAL_PORT:-29092}:29092"
+    networks: [sybsec]
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  # --- Layer 2: normalization ------------------------------------------------
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION:-8.15.0}
+    container_name: sybsec-logstash
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme_elastic}
+      - KAFKA_BROKER=kafka:9092
+    volumes:
+      - ./logstash/pipelines:/usr/share/logstash/pipeline:ro
+      - ./logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
+    ports:
+      - "9600:9600"
+    networks: [sybsec]
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9600/_node/pipelines | grep -q pipelines"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  # --- Layer 3B: ML anomaly detection ---------------------------------------
+  ml-anomaly:
+    build: ./ml/anomaly_service
+    image: sybsec/ml-anomaly:0.1.0
+    container_name: sybsec-ml-anomaly
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      - ML_LOG_LEVEL=${ML_LOG_LEVEL:-INFO}
+      - ML_ANOMALY_THRESHOLD=${ML_ANOMALY_THRESHOLD:-0.85}
+      - ML_ES_HOSTS=http://elasticsearch:9200
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme_elastic}
+      - KAFKA_BROKER=kafka:9092
+      - ML_KAFKA_TOPICS=${ML_KAFKA_TOPICS:-zeek-logs,suricata-alerts,wazuh-events,sysmon-events}
+    volumes:
+      - ml-models:/app/models/artifacts
+    ports:
+      - "${ML_PORT:-8088}:8088"
+    networks: [sybsec]
+    logging: *default-logging
+    # healthcheck is baked into the Dockerfile (curl /health)
+
+  # --- Layer 3C: dashboards --------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: sybsec-grafana
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme_grafana}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    networks: [sybsec]
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health | grep -q ok"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # --- Layer 1: network IDS sensor ------------------------------------------
+  # Reads from the host's interface (AF_PACKET). In a real deployment this NIC
+  # is the SPAN/mirror target from pfSense. Set SURICATA_IFACE in .env.
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: sybsec-suricata
+    restart: unless-stopped
+    network_mode: host          # needs raw access to the monitored interface
+    cap_add: [NET_ADMIN, NET_RAW, SYS_NICE]
+    command: ["-i", "${SURICATA_IFACE:-eth0}"]
+    volumes:
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml:ro
+      - ./suricata/rules:/var/lib/suricata/rules
+      - ./data/suricata/log:/var/log/suricata
+    logging: *default-logging
+    profiles: ["sensors"]       # opt-in: requires a real/mirror interface
+
+  # --- Layer 1/2: Wazuh single-node (opt-in profile) ------------------------
+  # Requires TLS certs generated first: ./scripts/deploy.sh wazuh-certs
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:${WAZUH_VERSION:-4.9.0}
+    container_name: sybsec-wazuh-indexer
+    restart: unless-stopped
+    profiles: ["wazuh"]
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh/certs:/usr/share/wazuh-indexer/certs:ro
+    ports: ["9201:9200"]
+    networks: [sybsec]
+    logging: *default-logging
+
+  wazuh-manager:
+    image: wazuh/wazuh-manager:${WAZUH_VERSION:-4.9.0}
+    container_name: sybsec-wazuh-manager
+    restart: unless-stopped
+    profiles: ["wazuh"]
+    depends_on: [wazuh-indexer]
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+      - ./wazuh/rules/local_rules.xml:/var/ossec/etc/rules/local_rules.xml
+      - ./wazuh/decoders/local_decoder.xml:/var/ossec/etc/decoders/local_decoder.xml
+      - ./wazuh/active-response:/var/ossec/active-response/bin-custom:ro
+    ports:
+      - "1514:1514"     # agent comms
+      - "1515:1515"     # agent enrollment
+      - "55000:55000"   # API
+    networks: [sybsec]
+    logging: *default-logging
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:${WAZUH_VERSION:-4.9.0}
+    container_name: sybsec-wazuh-dashboard
+    restart: unless-stopped
+    profiles: ["wazuh"]
+    depends_on: [wazuh-indexer]
+    ports: ["5602:5601"]
+    networks: [sybsec]
+    logging: *default-logging

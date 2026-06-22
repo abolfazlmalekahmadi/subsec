@@ -1,0 +1,24 @@
+# MITRE Caldera adversary profile — sybsec weekly detection validation.
+# Each ability maps to a Wazuh rule it should trigger; the detection-gap loop
+# (tests/detection_tests/gap_check.py) flags any ability that fired without a
+# corresponding alert within the SLA window.
+id: 8f1d2c00-7a55-4e21-9b33-sybsecweekly1
+name: sybsec Weekly Validation
+description: >
+  Exercises brute force, malware drop, lateral movement, and exfiltration so the
+  SOC can confirm coverage of the rules in wazuh/rules/local_rules.xml.
+atomic_ordering:
+  # T1110 Brute Force -> expect Wazuh rule 100010
+  - 09a60781-43e5-4739-b9c1-bf2b18e7e5f6   # ssh password spray (Atomic T1110.001)
+  # T1204 Malware / EICAR drop -> expect rule 100002
+  - 4b3e7c5d-1a2b-4c8d-9e0f-eicardroptest1  # write EICAR test file
+  # T1021 Lateral Movement -> expect rule 100030
+  - 65d2a7e1-3f4b-4c5d-8e9f-psexecsmbtest1  # psexec-style remote exec
+  # T1041 Exfiltration over C2 -> expect rule 100040 / Suricata 9000001
+  - 7c8d9e0f-1a2b-3c4d-5e6f-largeoutbound1  # >500MB outbound transfer
+# Map each ability to the detection it must produce (consumed by gap_check.py).
+sybsec_expected_detections:
+  "09a60781-43e5-4739-b9c1-bf2b18e7e5f6": { rule_id: "100010", sla_seconds: 30 }
+  "4b3e7c5d-1a2b-4c8d-9e0f-eicardroptest1": { rule_id: "100002", sla_seconds: 120 }
+  "65d2a7e1-3f4b-4c5d-8e9f-psexecsmbtest1": { rule_id: "100030", sla_seconds: 120 }
+  "7c8d9e0f-1a2b-3c4d-5e6f-largeoutbound1": { rule_id: "100040", sla_seconds: 600 }

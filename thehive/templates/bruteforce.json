@@ -1,0 +1,23 @@
+{
+  "name": "sybsec-bruteforce",
+  "displayName": "Brute Force / Credential Stuffing",
+  "titlePrefix": "[BRUTEFORCE]",
+  "severity": 2,
+  "tlp": 2,
+  "pap": 2,
+  "description": "Auto-created from Wazuh rule 100010/100011. SOAR Playbook 2 drives AbuseIPDB lookup, pfSense block, and account lock.",
+  "tags": ["sybsec", "bruteforce", "T1110"],
+  "tasks": [
+    { "title": "Triage: targeted vs spray", "group": "triage" },
+    { "title": "Cortex: AbuseIPDB + GeoIP", "group": "enrich" },
+    { "title": "Contain: block IP (pfSense + Wazuh AR)", "group": "contain" },
+    { "title": "Account: lock + reset if compromised", "group": "respond", "description": "If rule 100012 fired (success after failures), treat as compromise." },
+    { "title": "Notify user's manager", "group": "notify" },
+    { "title": "Close: record MTTD/MTTR", "group": "close" }
+  ],
+  "customFields": {
+    "source-ip": { "type": "string", "mandatory": true },
+    "target-account": { "type": "string", "mandatory": false },
+    "abuseipdb-score": { "type": "integer", "mandatory": false }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "_comment": "sybsec Cortex analyzer configuration. Secrets come from env vars at deploy time (see .env). Enable an analyzer by providing its API key; leave blank to disable. Auto-run is wired in Shuffle playbooks per observable type.",
+  "analyzers": {
+    "VirusTotal_GetReport_3_1": {
+      "enabled": true,
+      "dataTypeList": ["hash", "domain", "ip", "url"],
+      "config": { "key": "${VIRUSTOTAL_API_KEY}", "polling_interval": 60, "rate_limit": 4 },
+      "auto_run_on": ["hash", "url", "ip"]
+    },
+    "AbuseIPDB_1_0": {
+      "enabled": true,
+      "dataTypeList": ["ip"],
+      "config": { "key": "${ABUSEIPDB_API_KEY}", "days": 30 },
+      "auto_run_on": ["ip"]
+    },
+    "Shodan_Host_1_0": {
+      "enabled": true,
+      "dataTypeList": ["ip"],
+      "config": { "key": "${SHODAN_API_KEY}" },
+      "auto_run_on": ["ip"]
+    },
+    "MaxMind_GeoIP_4_0": {
+      "enabled": true,
+      "dataTypeList": ["ip"],
+      "config": {},
+      "auto_run_on": ["ip"]
+    },
+    "Urlscan_io_Search_0_1_0": {
+      "enabled": true,
+      "dataTypeList": ["url", "domain"],
+      "config": { "key": "${URLSCAN_API_KEY}" },
+      "auto_run_on": ["url"]
+    },
+    "MISP_2_1": {
+      "enabled": true,
+      "dataTypeList": ["hash", "ip", "domain", "url"],
+      "config": { "url": "https://misp:443", "key": "${MISP_API_KEY}", "certpath": "", "name": "sybsec-misp" },
+      "auto_run_on": ["hash", "ip", "domain", "url"]
+    }
+  },
+  "responders": {
+    "_comment": "Cortex responders triggered from TheHive case actions.",
+    "Wazuh_ActiveResponse": { "enabled": true, "actions": ["block-ip", "quarantine-host", "kill-process"] }
+  }
+}

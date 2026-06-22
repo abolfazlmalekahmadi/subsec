@@ -1,0 +1,66 @@
+{
+  "uid": "sybsec-soc-overview",
+  "title": "sybsec — SOC Overview",
+  "tags": ["sybsec", "soc"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total alerts (24h)",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "refId": "A", "query": "event.kind:alert", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [] }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "ML anomalies (24h)",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "refId": "A", "query": "event.module:ml-anomaly AND is_anomaly:true", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [] }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Alert rate by module",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "event.kind:alert",
+          "metrics": [ { "type": "count", "id": "1" } ],
+          "bucketAggs": [
+            { "type": "terms", "field": "event.module", "id": "2", "settings": { "size": "5" } },
+            { "type": "date_histogram", "field": "@timestamp", "id": "3", "settings": { "interval": "auto" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Top source IPs",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "event.kind:alert",
+          "metrics": [ { "type": "count", "id": "1" } ],
+          "bucketAggs": [ { "type": "terms", "field": "source.ip", "id": "2", "settings": { "size": "10", "order": "desc", "orderBy": "1" } } ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# Logstash multi-pipeline definition. Each source consumes its Kafka topic,
+# normalizes to ECS, and writes to a daily index governed by ILM.
+- pipeline.id: zeek
+  path.config: "/usr/share/logstash/pipeline/zeek.conf"
+  pipeline.workers: 2
+- pipeline.id: suricata
+  path.config: "/usr/share/logstash/pipeline/suricata.conf"
+  pipeline.workers: 2
+- pipeline.id: wazuh
+  path.config: "/usr/share/logstash/pipeline/wazuh.conf"
+  pipeline.workers: 2
+- pipeline.id: sysmon
+  path.config: "/usr/share/logstash/pipeline/sysmon.conf"
+  pipeline.workers: 1

@@ -1,0 +1,29 @@
+# Forwards Wazuh manager alerts.json -> Kafka(wazuh-events).
+# Reuses the Wazuh manager's logs volume (read-only) and the core sybsec network
+# (where Kafka lives). Bring up AFTER both the wazuh single-node and core stacks.
+#
+#   docker compose -f wazuh/filebeat-forwarder/docker-compose.yml up -d
+services:
+  wazuh-filebeat-forwarder:
+    image: docker.elastic.co/beats/filebeat:8.15.0
+    container_name: sybsec-wazuh-filebeat
+    restart: unless-stopped
+    user: root
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - wazuh_logs:/wazuh-logs:ro
+      - forwarder-data:/usr/share/filebeat/data
+    networks:
+      - sybsec
+
+volumes:
+  wazuh_logs:
+    external: true
+    name: single-node_wazuh_logs
+  forwarder-data:
+
+networks:
+  sybsec:
+    external: true
+    name: sybsec_sybsec

@@ -1,0 +1,48 @@
+# Filebeat on each sensor: tail sensor logs and publish to Kafka topics.
+# Deployed on Zeek/Suricata hosts and (as Winlogbeat) on Windows endpoints.
+filebeat.inputs:
+  - type: filestream
+    id: suricata-eve
+    enabled: true
+    paths: ["/var/log/suricata/eve.json"]
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+    fields: { sybsec_topic: "suricata-alerts" }
+    fields_under_root: true
+
+  - type: filestream
+    id: zeek-logs
+    enabled: true
+    paths: ["/opt/zeek/logs/current/*.log"]
+    parsers:
+      - ndjson: { target: "" }
+    fields: { sybsec_topic: "zeek-logs" }
+    fields_under_root: true
+
+  - type: filestream
+    id: wazuh-alerts
+    enabled: true
+    paths: ["/var/ossec/logs/alerts/alerts.json"]
+    parsers:
+      - ndjson: { target: "" }
+    fields: { sybsec_topic: "wazuh-events" }
+    fields_under_root: true
+
+# Route each input to its Kafka topic via the sybsec_topic field.
+output.kafka:
+  hosts: ["${KAFKA_BROKER:kafka:9092}"]
+  topic: "%{[sybsec_topic]}"
+  partition.round_robin: { reachable_only: true }
+  required_acks: 1
+  compression: lz4
+  max_message_bytes: 1000000
+  # Production: enable mTLS to the brokers (see STATUS.md / Helm).
+  # ssl.enabled: true
+  # ssl.certificate_authorities: ["/etc/filebeat/certs/ca.crt"]
+  # ssl.certificate: "/etc/filebeat/certs/filebeat.crt"
+  # ssl.key: "/etc/filebeat/certs/filebeat.key"
+
+logging.level: info
+monitoring.enabled: false

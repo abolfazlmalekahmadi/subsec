@@ -1,0 +1,37 @@
+{
+  "case_name_prefix": "[IRIS]",
+  "templates": [
+    {
+      "name": "exfiltration-forensics",
+      "display_name": "Data Exfiltration — Forensic Investigation",
+      "classification": "data-breach",
+      "tags": ["sybsec", "exfiltration", "forensics"],
+      "tasks": [
+        { "title": "Acquire PCAP from Arkime", "description": "Attach the captured PCAP (PB4 a3) as evidence; record SHA256." },
+        { "title": "Reconstruct timeline", "description": "Merge Wazuh FIM, Zeek conn.log, Sysmon, and Arkime sessions into a single timeline." },
+        { "title": "Identify exfiltrated data", "description": "Inspect payloads / file transfers; classify data sensitivity." },
+        { "title": "Attribute destination", "description": "Enrich destination IP/domain via MISP + OpenCTI; map to actor infra." },
+        { "title": "Scope blast radius", "description": "Other hosts talking to the same destination?" },
+        { "title": "Report + chain of custody", "description": "Finalize evidence register with custody trail." }
+      ],
+      "evidence_types": ["pcap", "memory-dump", "disk-image", "log-bundle"]
+    },
+    {
+      "name": "malware-deep-dive",
+      "display_name": "Malware — Deep Forensic Analysis",
+      "classification": "malware",
+      "tags": ["sybsec", "malware", "forensics"],
+      "tasks": [
+        { "title": "Acquire memory dump", "description": "From the isolated host (PB1 a7)." },
+        { "title": "Static + dynamic analysis", "description": "Hash, strings, sandbox detonation; record IoCs." },
+        { "title": "Persistence + lateral check", "description": "Autoruns, scheduled tasks, services; correlate Sysmon." },
+        { "title": "Produce IoCs -> MISP", "description": "Publish new IoCs back to MISP for the feedback loop." }
+      ],
+      "evidence_types": ["memory-dump", "sample", "disk-image"]
+    }
+  ],
+  "evidence_template": {
+    "fields": ["filename", "sha256", "source_host", "acquired_by", "acquired_at", "custody_log"],
+    "chain_of_custody": { "required": true, "log_each_transfer": true }
+  }
+}

@@ -1,0 +1,38 @@
+<!--
+  sybsec custom decoders. These parse the JSON payloads pushed into Wazuh by
+  the sybsec integrations (ML anomaly bridge, MISP enrichment, netflow summary,
+  and the malware scanner). Wazuh's json decoder handles field extraction;
+  these prematch/parent decoders tag the event so local_rules.xml can match.
+-->
+<decoder name="sybsec_anomaly">
+  <prematch>"event.module":"ml-anomaly"</prematch>
+</decoder>
+<decoder name="sybsec_anomaly_json">
+  <parent>sybsec_anomaly</parent>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>
+
+<decoder name="sybsec_malware">
+  <prematch>"sybsec_event":"malware_scan"</prematch>
+</decoder>
+<decoder name="sybsec_malware_json">
+  <parent>sybsec_malware</parent>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>
+
+<decoder name="sybsec_netflow">
+  <prematch>"sybsec_event":"netflow_summary"</prematch>
+</decoder>
+<decoder name="sybsec_netflow_json">
+  <parent>sybsec_netflow</parent>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>
+
+<!-- MISP enrichment appended by integrations/custom-misp.py -->
+<decoder name="sybsec_misp">
+  <prematch>"threat_intel.misp.matched"</prematch>
+</decoder>
+<decoder name="sybsec_misp_json">
+  <parent>sybsec_misp</parent>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>

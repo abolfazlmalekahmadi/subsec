@@ -1,0 +1,75 @@
+%YAML 1.1
+---
+# sybsec Suricata config (dev). In production, af-packet binds to the SPAN/mirror
+# interface fed by pfSense. EVE JSON is tailed by Filebeat -> Kafka(suricata-alerts).
+vars:
+  address-groups:
+    HOME_NET: "[10.0.0.0/8,192.168.0.0/16,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+
+default-log-dir: /var/log/suricata
+
+af-packet:
+  - interface: eth0
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    tpacket-v3: yes
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-printable: yes
+            http-body: yes
+            metadata: yes
+        - http:
+            extended: yes
+        - dns
+        - tls:
+            extended: yes
+        - files:
+            force-magic: yes
+            force-hash: [sha256]      # for YARA/MISP hash correlation
+        - flow
+        - anomaly
+
+  - stats:
+      enabled: yes
+      interval: 30
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+    http:
+      enabled: yes
+    dns:
+      tcp: { enabled: yes }
+      udp: { enabled: yes }
+
+# Extract files for downstream YARA scanning
+file-store:
+  version: 2
+  enabled: yes
+  dir: /var/log/suricata/files
+  force-hash: [sha256]
+
+default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - suricata.rules              # ET ruleset (populated by suricata-update)
+  - sybsec-local.rules          # custom rules
+
+logging:
+  default-log-level: notice
+  outputs:
+    - console:
+        enabled: yes

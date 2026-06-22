@@ -1,0 +1,21 @@
+{
+  "name": "sybsec-anomalous-behavior",
+  "displayName": "Anomalous Behavior (ML)",
+  "titlePrefix": "[ANOMALY]",
+  "severity": 2,
+  "tlp": 2, "pap": 2,
+  "description": "Auto-created from the ML anomaly service (score >= 0.85, Wazuh rule 100051). SOAR Playbook 3 attaches user/host context, OpenCTI ATT&CK, and MISP IoCs.",
+  "tags": ["sybsec", "ml-anomaly"],
+  "tasks": [
+    { "title": "Triage: review anomaly reason + top_features", "group": "triage", "description": "The ml-anomaly doc carries reason and per_model scores." },
+    { "title": "Context: pull user/host history from Wazuh", "group": "enrich" },
+    { "title": "Correlate: OpenCTI techniques + MISP IoCs", "group": "enrich" },
+    { "title": "Decide: true positive? tune threshold/feedback", "group": "investigate" },
+    { "title": "Page on-call if confirmed", "group": "notify" }
+  ],
+  "customFields": {
+    "anomaly-score": { "type": "float", "mandatory": true },
+    "top-features": { "type": "string", "mandatory": false },
+    "host": { "type": "string", "mandatory": false }
+  }
+}

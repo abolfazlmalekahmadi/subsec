@@ -1,0 +1,40 @@
+{
+  "uid": "sybsec-mttd-mttr",
+  "title": "sybsec — SLA: MTTD / MTTR",
+  "tags": ["sybsec", "sla"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-30d", "to": "now" },
+  "description": "MTTD/MTTR derived from the soc-metrics index emitted by Shuffle on case open/close. detection_latency_s = first_seen->alert; response_latency_s = alert->contained.",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "MTTD (avg, s) — target < 60s rule-based",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "query": "metric:detection_latency", "metrics": [ { "type": "avg", "field": "detection_latency_s", "id": "1" } ], "bucketAggs": [] } ],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 60 } ] } } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "MTTR (avg, min) — target < 10m",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+      "targets": [ { "refId": "A", "query": "metric:response_latency", "metrics": [ { "type": "avg", "field": "response_latency_s", "id": "1" } ], "bucketAggs": [] } ],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 600 } ] } } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Detection vs response latency trend",
+      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 5 },
+      "targets": [
+        { "refId": "A", "query": "metric:detection_latency", "metrics": [ { "type": "avg", "field": "detection_latency_s", "id": "1" } ], "bucketAggs": [ { "type": "date_histogram", "field": "@timestamp", "id": "2", "settings": { "interval": "1d" } } ] }
+      ]
+    }
+  ]
+}
