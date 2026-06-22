@@ -80,13 +80,40 @@ scn_suricata() {
   ok "Done. Grafana -> 'Network Traffic'; Kibana data view 'sybsec security-suricata'."
 }
 
+scn_preflight() {
+  log "Preflight: are all demo surfaces up?"
+  check() {
+    code=$(curl -sk -o /dev/null -w '%{http_code}' "$2" 2>/dev/null)
+    if [ "$code" = "200" ] || [ "$code" = "302" ]; then ok "UP   $1 ($code)  $2"
+    else printf '\033[31m   DOWN %s (%s)  %s\033[0m\n' "$1" "$code" "$2"; fi
+  }
+  check "Wazuh WUI " "https://localhost:5602/"
+  check "Kibana    " "http://localhost:5601/api/status"
+  check "Grafana   " "http://localhost:3000/api/health"
+  check "ML service" "http://localhost:8088/health"
+  check "TheHive   " "http://localhost:9000/api/status"
+  check "Cortex    " "http://localhost:9001/api/status"
+  check "Shuffle   " "http://localhost:3001/"
+  agents=$(docker exec "${WAZUH_MGR}" /var/ossec/bin/agent_control -l 2>/dev/null | grep -c "Active")
+  ok "Wazuh agents Active: ${agents}"
+}
+
+scn_reset() {
+  log "Reset: clearing the demo log and FIM watch files"
+  docker exec "${WAZUH_MGR}" sh -c ': > /var/log/sybsec-demo.log; rm -f /var/sybsec-watch/*' 2>/dev/null || true
+  docker exec sybsec-wazuh-agent-01 sh -c 'rm -f /var/sybsec-watch/*' 2>/dev/null || true
+  ok "Done. (Existing TheHive cases / ES docs are kept — delete in their UIs if needed.)"
+}
+
 case "${1:-}" in
+  preflight)  scn_preflight;;
   bruteforce) scn_bruteforce;;
   fim)        scn_fim;;
   webattack)  scn_webattack;;
   sudo)       scn_sudo;;
   anomaly)    scn_anomaly;;
   suricata)   scn_suricata;;
+  reset)      scn_reset;;
   all)        scn_bruteforce; scn_fim; scn_webattack; scn_sudo; scn_anomaly; scn_suricata;;
-  *) grep -E '^#   \./scripts/demo\.sh' "$0" | sed 's/^#   //'; exit 1;;
+  *) grep -E '^#   \./scripts/demo\.sh' "$0" | sed 's/^#   //'; echo "  ./scripts/demo.sh preflight | reset"; exit 1;;
 esac
