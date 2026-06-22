@@ -1,37 +1,168 @@
 {
   "uid": "sybsec-network-traffic",
-  "title": "sybsec — Network Traffic",
-  "tags": ["sybsec", "network"],
+  "title": "sybsec \u2014 Network Traffic",
+  "tags": [
+    "sybsec",
+    "network"
+  ],
+  "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Bytes out by source (Zeek conn.log)",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "title": "Suricata alerts over time",
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "query": "event.module:zeek",
-          "metrics": [ { "type": "sum", "field": "source.bytes", "id": "1" } ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.module:suricata",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
           "bucketAggs": [
-            { "type": "terms", "field": "source.ip", "id": "2", "settings": { "size": "10" } },
-            { "type": "date_histogram", "field": "@timestamp", "id": "3", "settings": { "interval": "5m" } }
-          ]
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "5m",
+                "min_doc_count": "0"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
         }
       ]
     },
     {
       "id": 2,
-      "type": "piechart",
-      "title": "Suricata alerts by category",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
-      "targets": [ { "refId": "A", "query": "event.module:suricata AND event.kind:alert", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [ { "type": "terms", "field": "rule.category", "id": "2", "settings": { "size": "10" } } ] } ]
+      "type": "table",
+      "title": "Suricata alerts by signature",
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.module:suricata",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "3",
+              "type": "terms",
+              "field": "rule.name",
+              "settings": {
+                "size": "10",
+                "order": "desc",
+                "orderBy": "_count",
+                "min_doc_count": "1"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Top destination ports",
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.kind:alert",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "3",
+              "type": "terms",
+              "field": "destination.port",
+              "settings": {
+                "size": "10",
+                "order": "desc",
+                "orderBy": "_count",
+                "min_doc_count": "1"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
+        }
+      ]
     }
   ]
 }

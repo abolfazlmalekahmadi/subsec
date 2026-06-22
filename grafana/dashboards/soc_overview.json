@@ -1,49 +1,224 @@
 {
   "uid": "sybsec-soc-overview",
-  "title": "sybsec — SOC Overview",
-  "tags": ["sybsec", "soc"],
+  "title": "sybsec \u2014 SOC Overview",
+  "tags": [
+    "sybsec",
+    "soc"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
-  "templating": { "list": [] },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "Total alerts (24h)",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
       "targets": [
-        { "refId": "A", "query": "event.kind:alert", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [] }
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.kind:alert",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "5m",
+                "min_doc_count": "0"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
+        }
       ]
     },
     {
       "id": 2,
       "type": "stat",
       "title": "ML anomalies (24h)",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
       "targets": [
-        { "refId": "A", "query": "event.module:ml-anomaly AND is_anomaly:true", "metrics": [ { "type": "count", "id": "1" } ], "bucketAggs": [] }
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.module:\"ml-anomaly\" AND is_anomaly:true",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "5m",
+                "min_doc_count": "0"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
+        }
       ]
     },
     {
       "id": 3,
       "type": "timeseries",
       "title": "Alert rate by module",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
           "query": "event.kind:alert",
-          "metrics": [ { "type": "count", "id": "1" } ],
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
           "bucketAggs": [
-            { "type": "terms", "field": "event.module", "id": "2", "settings": { "size": "5" } },
-            { "type": "date_histogram", "field": "@timestamp", "id": "3", "settings": { "interval": "auto" } }
-          ]
+            {
+              "id": "3",
+              "type": "terms",
+              "field": "event.module",
+              "settings": {
+                "size": "5",
+                "order": "desc",
+                "orderBy": "_count",
+                "min_doc_count": "1"
+              }
+            },
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "5m",
+                "min_doc_count": "0"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
         }
       ]
     },
@@ -51,14 +226,108 @@
       "id": 4,
       "type": "table",
       "title": "Top source IPs",
-      "datasource": { "type": "elasticsearch", "uid": "sybsec-es" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
       "targets": [
         {
           "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
           "query": "event.kind:alert",
-          "metrics": [ { "type": "count", "id": "1" } ],
-          "bucketAggs": [ { "type": "terms", "field": "source.ip", "id": "2", "settings": { "size": "10", "order": "desc", "orderBy": "1" } } ]
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "3",
+              "type": "terms",
+              "field": "source.ip",
+              "settings": {
+                "size": "10",
+                "order": "desc",
+                "orderBy": "_count",
+                "min_doc_count": "1"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Alerts by rule id",
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "sybsec-es"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "sybsec-es"
+          },
+          "query": "event.kind:alert",
+          "alias": "",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "3",
+              "type": "terms",
+              "field": "rule.id",
+              "settings": {
+                "size": "10",
+                "order": "desc",
+                "orderBy": "_count",
+                "min_doc_count": "1"
+              }
+            },
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "5m",
+                "min_doc_count": "0"
+              }
+            }
+          ],
+          "timeField": "@timestamp"
         }
       ]
     }

@@ -2,13 +2,15 @@
 apiVersion: 1
 datasources:
   - name: sybsec-es
+    uid: sybsec-es          # pinned so dashboards can reference it reliably
     type: elasticsearch
     access: proxy
     url: http://elasticsearch:9200
     database: "security-*"
     jsonData:
       timeField: "@timestamp"
-      esVersion: "8.0.0"
+      # No esVersion: let Grafana auto-detect ES 8.x so it emits fixed_interval
+      # (a stale/low esVersion makes the ES8 query 400).
       maxConcurrentShardRequests: 5
       logMessageField: message
       logLevelField: event.severity

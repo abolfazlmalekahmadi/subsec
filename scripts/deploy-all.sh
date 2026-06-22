@@ -38,6 +38,10 @@ cmd_up() {
   ./kafka/topics.sh >/dev/null 2>&1 && ok "kafka topics created" || ok "kafka topics (already exist)"
   curl -fsS -u "$ES_AUTH" -XPUT "http://localhost:${ES_PORT:-9200}/_ilm/policy/sybsec-ilm" \
     -H 'Content-Type: application/json' -d '{"policy":{"phases":{"hot":{"min_age":"0ms","actions":{"rollover":{"max_age":"1d","max_primary_shard_size":"25gb"}}},"delete":{"min_age":"90d","actions":{"delete":{}}}}}}' >/dev/null 2>&1 && ok "ILM policy applied"
+  # Index template so the ML anomalies index maps event.module/source.ip
+  # consistently with the Wazuh/Suricata indices (else Grafana terms aggs 400).
+  curl -fsS -u "$ES_AUTH" -XPUT "http://localhost:${ES_PORT:-9200}/_index_template/sybsec-security-anomalies" \
+    -H 'Content-Type: application/json' --data-binary @elasticsearch/index-template.json >/dev/null 2>&1 && ok "ES index template applied"
 
   # 2) WAZUH single-node ----------------------------------------------------
   b "2/7 Wazuh (indexer + manager + dashboard/WUI)"
