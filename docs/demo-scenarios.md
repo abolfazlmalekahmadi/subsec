@@ -111,6 +111,30 @@ Produces a Suricata EVE alert (SSH scan) to Kafka.
 
 ---
 
+## Scenario 7 — Detection → auto TheHive case (Phase 3)  →  `./scripts/demo.sh bruteforce`
+
+The same brute force now also **auto-creates a case** in TheHive via the Wazuh
+integration (`custom-thehive.py`).
+
+**What happens:** rule `100010` fires → `integratord` → a TheHive case
+("[Brute Force / Credential Stuffing] …", severity HIGH, tags T1110/sybsec).
+
+**Show it:**
+- **TheHive → Cases** (http://localhost:9000, `admin@thehive.local` / `secret`,
+  org **sybsec**) → the new case appears with the source IP, MITRE T1110, and the
+  raw log in the description. Open tasks/observables.
+- Narrate: *Cortex would auto-run reputation analyzers on the source IP, and
+  Shuffle Playbook 2 would block it at the firewall — those are wired next.*
+
+## Scenario 8 — Wazuh agent endpoint
+
+A real agent (`sybsec-endpoint-01`) is enrolled. Trigger an endpoint-side event:
+```bash
+docker exec sybsec-wazuh-agent-01 sh -c 'echo tampered >> /var/sybsec-watch/agentfile.conf'
+```
+**Show it:** **Wazuh WUI → Agents** → `sybsec-endpoint-01` = *Active*; its FIM and
+rootcheck events are attributed to that agent (not the manager).
+
 ## Suggested 5-minute demo flow
 
 1. `./scripts/demo.sh all` (fires everything), then walk the screens:

@@ -154,3 +154,41 @@ Added `restart: unless-stopped` to all core services (Logstash had exited).
 | Grafana | http://localhost:3000 | admin / changeme_grafana |
 | ML API | http://localhost:8088/health | — |
 | Elasticsearch | http://localhost:9200 | elastic / changeme_elastic |
+| **TheHive** | http://localhost:9000 | admin@thehive.local / secret |
+| **Cortex** | http://localhost:9001 | (first-run setup in UI) |
+| **Shuffle** | http://localhost:3001 | admin@sybsec.local / sybsec-shuffle-admin |
+
+## Wazuh agent LIVE — `wazuh/agent/`
+
+A containerized Wazuh agent (stand-in for a real Linux endpoint) built from the
+official apt package, auto-enrolls with the manager.
+
+- `agent_control -l` → **ID 001 sybsec-endpoint-01, Active**, connected on 1514.
+- Reports rootcheck + FIM events attributed to the agent.
+- Real endpoints: install the `wazuh-agent` deb/rpm/msi and set `WAZUH_MANAGER`.
+
+## Phase 3 LIVE — case management + SOAR
+
+| Component | State |
+|---|---|
+| TheHive 5.2.13 (+ Cassandra + ES7) | up, healthy; org `sybsec` + service user + API key |
+| Cortex 3.1.7 | up; DB migrated (analyzer API keys configured in UI) |
+| Shuffle (frontend/backend/orborus/opensearch/workers) | up, UI HTTP 200 |
+
+### Detection → case automation (VERIFIED)
+```
+SSH brute force → Wazuh 5710 → 5712 → 100010 (sybsec)
+  → integratord → custom-thehive.py → TheHive case #2
+     "[Brute Force / Credential Stuffing] … 198.51.100.99"  severity HIGH(3)
+     tags: T1110, bruteforce, sybsec, rule:100010, wazuh
+```
+Integration: `wazuh/integrations/custom-thehive{,.py}` + an `<integration>` block
+(committed with the `__THEHIVE_API_KEY__` placeholder; real key injected only
+into the running container — never committed).
+
+### Still design-only in Phase 3
+- Shuffle **playbook wiring** (import the 4 JSON workflows, bind app-IDs,
+  webhook from Wazuh) — Shuffle is up but the visual workflows aren't bound yet.
+  The direct Wazuh→TheHive path already proves the alert→case outcome.
+- Cortex analyzers need real API keys (VirusTotal/AbuseIPDB/etc.) entered in the
+  Cortex UI before they run.

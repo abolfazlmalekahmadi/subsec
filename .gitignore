@@ -24,6 +24,14 @@ pcap/
 models/*.joblib
 ml/anomaly_service/models/artifacts/
 
+# Shuffle runtime data (opensearch DB, hot-loaded apps, files)
+shuffle/deploy/shuffle-database/
+shuffle/deploy/shuffle-apps/
+shuffle/deploy/shuffle-files/
+
+# Wazuh agent enrolled keys
+**/client.keys
+
 # Logs
 *.log
 logs/

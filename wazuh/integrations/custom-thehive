@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wazuh integratord wrapper: invokes the python integration with the embedded
+# Wazuh python interpreter, passing through (alert_file api_key hook_url ...).
+WPYTHON_BIN="framework/python/bin/python3"
+SCRIPT_PATH_NAME="$0"
+DIR_NAME="$(cd "$(dirname "${SCRIPT_PATH_NAME}")" || exit; pwd -P)"
+WAZUH_PATH="$(cd "${DIR_NAME}/.." || exit; pwd -P)"
+PYTHON_SCRIPT="${DIR_NAME}/custom-thehive.py"
+
+"${WAZUH_PATH}/${WPYTHON_BIN}" "${PYTHON_SCRIPT}" "$@"

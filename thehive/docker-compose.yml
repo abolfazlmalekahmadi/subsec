@@ -1,0 +1,105 @@
+# TheHive 5 + Cortex case-management / analyzer stack.
+# Cassandra (data) + Elasticsearch 7 (index, shared) + TheHive + Cortex.
+# Heavy: ~7-8 GB RAM. Reachable on the host: TheHive :9000, Cortex :9001.
+#
+#   docker compose -f thehive/docker-compose.yml up -d
+#
+# First-run: open Cortex (http://localhost:9001), create the admin + an org +
+# an API key, then put that key in TheHive's Cortex connector (UI or config).
+services:
+  cassandra:
+    image: cassandra:4.1
+    container_name: sybsec-thehive-cassandra
+    restart: unless-stopped
+    environment:
+      - CASSANDRA_CLUSTER_NAME=thehive
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    networks: [thehive]
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' >/dev/null 2>&1 || nodetool status >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.23
+    container_name: sybsec-thehive-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - thread_pool.search.queue_size=100000
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - thehive-es-data:/usr/share/elasticsearch/data
+    networks: [thehive]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -qE 'green|yellow'"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+
+  cortex:
+    image: thehiveproject/cortex:3.1.7
+    container_name: sybsec-cortex
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      - job_directory=/tmp/cortex-jobs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # Cortex runs analyzers as containers
+      - cortex-jobs:/tmp/cortex-jobs
+    ports:
+      - "9001:9001"
+    networks: [thehive]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9001/api/status >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+
+  thehive:
+    image: strangebee/thehive:5.2.13-1
+    container_name: sybsec-thehive
+    restart: unless-stopped
+    depends_on:
+      cassandra: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+    environment:
+      - JVM_OPTS=-Xms1g -Xmx1g
+    command:
+      - --no-config
+      - --config-file
+      - /etc/thehive/application.conf
+    volumes:
+      - ./config/application.conf:/etc/thehive/application.conf:ro
+      - thehive-data:/opt/thp/thehive/files
+    ports:
+      - "9000:9000"
+    networks: [thehive]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/status >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+
+volumes:
+  cassandra-data:
+  thehive-es-data:
+  thehive-data:
+  cortex-jobs:
+
+networks:
+  thehive:
+    driver: bridge

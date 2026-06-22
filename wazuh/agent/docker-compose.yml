@@ -1,0 +1,21 @@
+# A containerized Wazuh agent that enrolls with the single-node manager.
+# Joins the manager's network so `wazuh.manager` resolves for 1514/1515.
+#
+#   docker compose -f wazuh/agent/docker-compose.yml up -d --build
+services:
+  wazuh-agent:
+    build: .
+    image: sybsec/wazuh-agent:4.9.0
+    container_name: sybsec-wazuh-agent-01
+    restart: unless-stopped
+    hostname: sybsec-endpoint-01
+    environment:
+      - WAZUH_MANAGER=wazuh.manager
+      - WAZUH_AGENT_NAME=sybsec-endpoint-01
+    networks:
+      - wazuh
+
+networks:
+  wazuh:
+    external: true
+    name: single-node_default
