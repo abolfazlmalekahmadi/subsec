@@ -1,14 +1,20 @@
 # =============================================================================
-# sybsec — DEV-SCALE single-node stack. Boots on one host (≥16 GB RAM free).
+# sybsec — CORE stack only (ES, Kibana, Kafka, Logstash, ML, Grafana, Suricata).
+#
+# This file is ONE of 6 compose stacks. It does NOT start Wazuh, TheHive,
+# Cortex, Shuffle, the forwarder, or the agent — those live in their own compose
+# files and need cross-stack wiring. To bring up the WHOLE platform with one
+# command, use:  ./scripts/deploy-all.sh   (see README "Quick start").
 #
 # This is NOT the production topology. Production (3-node ES, 3-broker Kafka,
-# Malcolm, MISP/OpenCTI/TheHive/Cortex) targets Kubernetes/Helm — see STATUS.md.
+# Malcolm) targets Kubernetes/Helm — see STATUS.md.
 #
 # Profiles:
-#   (default)  core    : elasticsearch, kibana, kafka, logstash, ml-anomaly, grafana, suricata
-#   wazuh              : wazuh single-node (indexer + manager + dashboard) — needs certs (see scripts/deploy.sh)
+#   (default)  core : elasticsearch, kibana, kafka, logstash, ml-anomaly, grafana
+#   sensors         : suricata (needs a real/mirror NIC)
+#   wazuh           : legacy inline wazuh (prefer wazuh/single-node/ — see deploy-all.sh)
 #
-# Usage: ./scripts/deploy.sh up   (wraps `docker compose up -d` + health waits)
+# Usage: ./scripts/deploy.sh up   (core only, with health waits)
 # =============================================================================
 
 x-logging: &default-logging

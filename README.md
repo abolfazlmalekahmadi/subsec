@@ -46,20 +46,38 @@ docs/                     Architecture + analyst runbooks
 tests/detection_tests/    Automated detection-validation tests
 ```
 
-## Quick start (dev scale)
+## Quick start
 
+### Everything, one command (recommended)
 ```bash
 cp .env.example .env          # then edit secrets
-./scripts/deploy.sh up        # brings up core stack with health checks
-./scripts/deploy.sh status    # show health of each service
-make ml-test                  # run ML service unit tests
-./scripts/deploy.sh down      # tear down
+./scripts/deploy-all.sh       # ALL stacks + cross-stack wiring, in order
+./scripts/demo.sh preflight   # confirm every surface is UP
+./scripts/deploy-all.sh down  # tear everything down
 ```
 
-> The dev `docker-compose.yml` runs **single-node** Elasticsearch, **one**
-> Kafka broker, Wazuh, Suricata, Logstash, Kibana, Grafana, and the ML
-> service. Production-scale (3-node ES, 3-broker Kafka, Malcolm) targets
-> Kubernetes/Helm — see `STATUS.md`.
+### Just the core stack
+```bash
+./scripts/deploy.sh up        # core only (ES, Kafka, Logstash, ML, Grafana, Kibana)
+```
+
+> **Does one `docker compose up` start the whole platform? No.** The system is
+> **6 compose stacks** — `docker-compose.yml` (core) plus `wazuh/single-node`,
+> `wazuh/filebeat-forwarder`, `wazuh/agent`, `thehive`, and `shuffle/deploy` —
+> and several steps are **imperative**, not declarative: TLS cert generation,
+> joining stacks across docker networks, creating + injecting the TheHive API
+> key, installing the Wazuh→TheHive integration, enrolling the agent, Kafka
+> topics, ILM, and Kibana data views. `scripts/deploy-all.sh` runs all of it in
+> the correct order (idempotently). A single mega-compose can't express the
+> cross-stack wiring, which is why the orchestrator exists.
+
+> Dev = single-host. Production-scale (3-node ES, 3-broker Kafka, Malcolm) is
+> the Kubernetes/Helm target — see `STATUS.md`.
+
+## Demo
+
+`docs/DEMO.md` is a full 15-minute presenter runbook (Run / Show / Say per step).
+Fire scenarios with `./scripts/demo.sh {bruteforce|fim|webattack|sudo|anomaly|suricata|all}`.
 
 ## License
 
