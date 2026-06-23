@@ -1,0 +1,394 @@
+{
+  "workflow_as_code": false,
+  "actions": [
+    {
+      "app_name": "http",
+      "app_version": "1.4.0",
+      "description": "",
+      "app_id": "ad100d57-033c-462e-8c6a-bc0b311f65af",
+      "errors": [],
+      "id": "8c1e5453-f768-4f11-aa21-7a22f8a2977f",
+      "is_valid": true,
+      "isStartNode": true,
+      "sharing": true,
+      "label": "Create TheHive case",
+      "public": true,
+      "generated": false,
+      "environment": "Shuffle",
+      "name": "POST",
+      "parameters": [
+        {
+          "description": "",
+          "id": "",
+          "name": "url",
+          "example": "",
+          "value": "http://__HOST_IP__:9000/api/v1/case",
+          "multiline": false,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": true,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "headers",
+          "example": "",
+          "value": "Authorization: Bearer __THEHIVE_API_KEY__\nContent-Type: application/json",
+          "multiline": true,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "body",
+          "example": "",
+          "value": "{\"title\":\"[SOAR] $exec.title\",\"description\":\"Auto-created by Shuffle from Wazuh rule $exec.all_fields.rule.id. Source IP: $exec.all_fields.data.srcip\",\"severity\":2,\"tags\":[\"sybsec\",\"shuffle\",\"soar\",\"bruteforce\"]}",
+          "multiline": true,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "username",
+          "example": "",
+          "value": "",
+          "multiline": false,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "password",
+          "example": "",
+          "value": "",
+          "multiline": false,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "verify",
+          "example": "",
+          "value": "false",
+          "multiline": false,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        },
+        {
+          "description": "",
+          "id": "",
+          "name": "timeout",
+          "example": "",
+          "value": "15",
+          "multiline": false,
+          "multiselect": false,
+          "options": null,
+          "action_field": "",
+          "variant": "",
+          "required": false,
+          "configuration": false,
+          "tags": null,
+          "schema": {
+            "type": ""
+          },
+          "skip_multicheck": false,
+          "custom_value": false,
+          "value_replace": null,
+          "unique_toggled": false,
+          "error": "",
+          "hidden": false
+        }
+      ],
+      "execution_variable": {
+        "description": "",
+        "id": "",
+        "name": "",
+        "value": ""
+      },
+      "position": {
+        "x": 449.5,
+        "y": 446.1
+      },
+      "authentication_id": "",
+      "category": "",
+      "reference_url": "",
+      "sub_action": false,
+      "run_magic_output": false,
+      "run_magic_input": false,
+      "execution_delay": 0,
+      "category_label": null,
+      "suggestion": false,
+      "parent_controlled": false,
+      "source_workflow": "",
+      "source_execution": ""
+    }
+  ],
+  "branches": [],
+  "visual_branches": null,
+  "triggers": [],
+  "comments": [],
+  "configuration": {
+    "exit_on_error": false,
+    "start_from_top": false,
+    "skip_notifications": false
+  },
+  "created": 1782240902,
+  "edited": 1782241532,
+  "last_runtime": 0,
+  "due_date": 0,
+  "tags": [
+    "sybsec",
+    "bruteforce"
+  ],
+  "id": "d6a8bcfb-2d44-42dc-a762-4c6eb503a4c6",
+  "is_valid": true,
+  "name": "PB2 \u2014 Brute Force (sybsec)",
+  "description": "Wazuh 100010 -> TheHive case + block",
+  "start": "8c1e5453-f768-4f11-aa21-7a22f8a2977f",
+  "owner": "f2db8c79-f267-4c36-b934-acb3a7cd47d9",
+  "sharing": "private",
+  "execution_org": {
+    "name": "default",
+    "id": "8c618ece-a6af-4434-8083-cc00b79a02bb",
+    "users": [],
+    "role": "admin",
+    "child_orgs": null,
+    "region_url": "",
+    "is_partner": false,
+    "image": "",
+    "creator_org": "",
+    "branding": {
+      "enable_chat": false,
+      "home_url": "",
+      "theme": "",
+      "documentation_link": "",
+      "global_user": false,
+      "support_email": "",
+      "logout_url": "",
+      "brand_color": "",
+      "brand_name": ""
+    }
+  },
+  "org_id": "8c618ece-a6af-4434-8083-cc00b79a02bb",
+  "workflow_variables": null,
+  "execution_environment": "",
+  "previously_saved": true,
+  "categories": {
+    "siem": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "communication": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "assets": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "cases": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "network": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "intel": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "edr": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "iam": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "ai": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "email": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    },
+    "other": {
+      "name": "",
+      "count": 0,
+      "id": "",
+      "description": "",
+      "large_image": ""
+    }
+  },
+  "example_argument": "",
+  "public": false,
+  "default_return_value": "",
+  "contact_info": {
+    "name": "",
+    "url": ""
+  },
+  "published_id": "",
+  "revision_id": "",
+  "usecase_ids": null,
+  "input_questions": null,
+  "form_control": {
+    "input_markdown": "",
+    "output_yields": null,
+    "cleanup_actions": null,
+    "form_width": 0
+  },
+  "blogpost": "",
+  "video": "",
+  "status": "test",
+  "workflow_type": "",
+  "generated": false,
+  "hidden": false,
+  "background_processing": false,
+  "updated_by": "admin@sybsec.local",
+  "validated": false,
+  "validation": {
+    "valid": true,
+    "changed_at": 1782241579000,
+    "last_valid": 1782241579000,
+    "validation_ran": true,
+    "notifications_created": 0,
+    "environment": "Shuffle",
+    "workflow_id": "",
+    "execution_id": "ed069f3f-8b55-48b2-8d4f-44fa8dd800c2",
+    "node_id": "",
+    "total_problems": 0,
+    "errors": [],
+    "subflow_apps": []
+  },
+  "parentorg_workflow": "",
+  "childorg_workflow_ids": null,
+  "suborg_distribution": [],
+  "backup_config": {
+    "onprem_backup": false,
+    "upload_repo": "",
+    "upload_branch": "",
+    "upload_username": "",
+    "upload_token": "",
+    "tokens_encrypted": false
+  },
+  "auth_groups": null
+}

@@ -26,38 +26,41 @@ Wazuh's active-response + integrator engine.
   `__THEHIVE_API_KEY__` placeholder and is injected at deploy time by
   `scripts/deploy-all.sh` (never committed).
 
-## Shuffle (visual SOAR) — status & how to wire it
+## Shuffle (visual SOAR) — WIRED & verified
 
-Shuffle is **up** (http://localhost:3001, `admin@sybsec.local` /
-`sybsec-shuffle-admin`) and the four playbooks are in `shuffle/playbooks/`. The
-visual workflow binding is **done in the Shuffle UI** — this Shuffle build does
-not provision an API key headlessly (first-run login returns an empty org/user
-until the UI setup completes), so the workflow/webhook can't be created purely
-from a script. The automated loop above already delivers the same outcome
-(block + case); Shuffle adds multi-tool orchestration, approvals, and the visual
-audit trail.
+The brute-force path is also wired through Shuffle as the orchestrator and
+verified end to end:
 
-### Wire Playbook 2 (brute force) in the UI — ~5 minutes
-1. Log into Shuffle → finish first-run (set the org if prompted) →
-   **Admin → API key**, copy it.
-2. **Workflows → New** → drag a **Webhook** trigger; copy its URL.
-3. Add a **TheHive** app node → action *Create case*; set auth =
-   `http://sybsec-thehive:9000` + the TheHive API key (org `sybsec`).
-4. Add an **HTTP** node → `PUT https://sybsec-wazuh-manager:55000/active-response`
-   (or call the blocklist) to block the source IP.
-5. (Optional) Add a **Cortex/AbuseIPDB** node before the block for reputation.
-6. Save & activate. Then point Wazuh at the webhook by adding an integration to
-   the manager config:
-   ```xml
-   <integration>
-     <name>custom-shuffle</name>
-     <hook_url>http://<shuffle-host>:3001/api/v1/hooks/<webhook-id></hook_url>
-     <rule_id>100010</rule_id>
-     <alert_format>json</alert_format>
-   </integration>
-   ```
-7. Fire `./scripts/demo.sh bruteforce` → watch the run light up in Shuffle.
+```
+SSH brute force → Wazuh 100010 → (shuffle integration) → Shuffle webhook
+   → workflow "PB2 — Brute Force" → HTTP node → TheHive case ([SOAR], tag soar)
+```
 
-> Import the bundled logic from `shuffle/playbooks/*.json` via
-> **Workflows → Import**, then bind each action's app + auth (app IDs are
-> environment-specific). See `shuffle/README.md`.
+Verified live: real attack → Shuffle execution + a `[SOAR]`-titled TheHive case.
+The workflow runs are visible in the Shuffle UI (Workflows → PB2 → Executions).
+
+- Workflow export: `shuffle/playbooks/pb2_bruteforce_shuffle.json` (sanitized —
+  `__THEHIVE_API_KEY__` and `__HOST_IP__` placeholders).
+- Reproduce the wiring with `./scripts/wire-shuffle.sh <SHUFFLE_APIKEY>` (it
+  imports the workflow, creates+starts the webhook, connects the manager to the
+  Shuffle network, and registers the Wazuh `shuffle` integration).
+
+### Why a few values are environment-specific
+- **Shuffle API key** — this Shuffle build requires a ≥36-char (UUID) key and
+  doesn't provision one headlessly; generate it once in the UI
+  (avatar → **Settings → API key → regenerate**) and pass it to the script.
+- **Webhook id** — created per-deployment; injected into the manager config in
+  place of `__SHUFFLE_WEBHOOK_ID__`.
+- **Host IP** — Shuffle runs app containers in a swarm overlay, so the HTTP node
+  reaches TheHive via the host IP (`__HOST_IP__:9000`), not the container name.
+
+### Extending the workflow (in the UI)
+Open PB2 and add nodes before the case: a **Cortex/AbuseIPDB** reputation check,
+then an **HTTP** node to block the IP (call the Wazuh API active-response or a
+pfSense alias). The bundled `shuffle/playbooks/playbook{1,3,4}*.json` describe
+the other three playbooks' logic to build the same way.
+
+> Note: the direct Wazuh→TheHive integration (`custom-thehive`) and this Shuffle
+> path both run, so a brute force currently opens two cases (`[Brute Force …]`
+> and `[SOAR] …`). In production pick one path; disable `custom-thehive` if
+> Shuffle owns case creation.

@@ -186,13 +186,19 @@ Integration: `wazuh/integrations/custom-thehive{,.py}` + an `<integration>` bloc
 (committed with the `__THEHIVE_API_KEY__` placeholder; real key injected only
 into the running container — never committed).
 
-### Still design-only in Phase 3
-- Shuffle **playbook wiring** (import the 4 JSON workflows, bind app-IDs,
-  webhook from Wazuh) — Shuffle is up but the visual workflows aren't bound yet.
-  This Shuffle build doesn't provision an API key headlessly, so the
-  webhook/workflow is wired in the UI — exact steps in `docs/soar.md`.
-- Cortex analyzers need real API keys (VirusTotal/AbuseIPDB/etc.) entered in the
-  Cortex UI before they run.
+### Phase 3 SOAR — Shuffle WIRED end-to-end (verified)
+Real brute force → Wazuh 100010 → **Shuffle webhook → PB2 workflow → TheHive
+`[SOAR]` case**, verified live (Shuffle execution + case created). Workflow
+export: `shuffle/playbooks/pb2_bruteforce_shuffle.json`; reproduce with
+`./scripts/wire-shuffle.sh <apikey>`. The Shuffle API key is generated once in
+the UI (this build won't provision it headlessly); webhook id + host IP are
+env-specific and injected at wire time. See `docs/soar.md`.
+
+### Still design-only / UI-bound
+- Extending PB2 with Cortex/AbuseIPDB reputation + an IP-block node (build in the
+  Shuffle UI; the Wazuh-native auto-block already blocks in parallel).
+- Cortex analyzers need real API keys (VirusTotal/AbuseIPDB/etc.) in the UI.
+- Playbooks 1/3/4 logic is in `shuffle/playbooks/*.json` (build like PB2).
 
 ## Automated response LIVE (Wazuh-native SOAR) — VERIFIED
 
