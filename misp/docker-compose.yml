@@ -1,0 +1,97 @@
+# MISP threat-intelligence platform (Layer 4). ~3-4 GB RAM.
+# Reachable on the host at https://localhost:8447 (self-signed).
+#
+#   docker compose -f misp/docker-compose.yml up -d
+#
+# First start takes a few minutes (DB init). Then:
+#   MISP_URL=https://localhost:8447 MISP_API_KEY=<admin-key> ./misp/setup.sh
+# Default admin: ${MISP_ADMIN_EMAIL} / ${MISP_ADMIN_PASSWORD} (from .env)
+services:
+  misp-redis:
+    image: valkey/valkey:7.2
+    container_name: sybsec-misp-redis
+    restart: unless-stopped
+    command: ["--save", "3600", "1", "--appendonly", "no"]
+    networks: [misp]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  misp-db:
+    image: mariadb:10.11
+    container_name: sybsec-misp-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:-changeme_misp_db}
+      - MYSQL_ROOT_PASSWORD=${MISP_DB_ROOT_PASSWORD:-changeme_misp_root}
+      - MYSQL_DATABASE=misp
+    command: ["--innodb-buffer-pool-size=512M", "--max-connections=300"]
+    volumes:
+      - misp-db:/var/lib/mysql
+    networks: [misp]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  misp-modules:
+    image: ghcr.io/misp/misp-docker/misp-modules:latest
+    container_name: sybsec-misp-modules
+    restart: unless-stopped
+    environment:
+      - REDIS_BACKEND=misp-redis
+    depends_on:
+      misp-redis: { condition: service_healthy }
+    networks: [misp]
+
+  misp-core:
+    image: ghcr.io/misp/misp-docker/misp-core:latest
+    container_name: sybsec-misp-core
+    restart: unless-stopped
+    depends_on:
+      misp-db: { condition: service_healthy }
+      misp-redis: { condition: service_healthy }
+    environment:
+      - BASE_URL=https://localhost:8447
+      - ADMIN_EMAIL=${MISP_ADMIN_EMAIL:-admin@sybsec.local}
+      - ADMIN_PASSWORD=${MISP_ADMIN_PASSWORD:-changeme_misp}
+      - ADMIN_KEY=${MISP_API_KEY:-}
+      - MYSQL_HOST=misp-db
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:-changeme_misp_db}
+      - MYSQL_DATABASE=misp
+      - REDIS_FQDN=misp-redis
+      - MISP_MODULES_FQDN=http://misp-modules
+      - "DISABLE_IPV6=true"
+    ports:
+      - "${MISP_HTTP_PORT:-8087}:80"
+      - "${MISP_HTTPS_PORT:-8447}:443"
+    volumes:
+      - misp-config:/var/www/MISP/app/Config
+      - misp-files:/var/www/MISP/app/files
+      - misp-logs:/var/www/MISP/app/tmp/logs
+    networks: [misp, sybsec]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSk https://localhost/users/login >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  misp-db:
+  misp-config:
+  misp-files:
+  misp-logs:
+
+networks:
+  misp:
+    driver: bridge
+  # join the core sybsec network so the Wazuh manager can query MISP by name
+  sybsec:
+    external: true
+    name: sybsec_sybsec

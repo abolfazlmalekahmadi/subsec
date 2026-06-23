@@ -139,6 +139,46 @@ the central index.
 
 Added `restart: unless-stopped` to all core services (Logstash had exited).
 
+## Phase 4 — Threat Intelligence
+
+### MISP — DEPLOYED (UI live); Wazuh→MISP lookup ready
+MISP is up (`misp/docker-compose.yml`): misp-core + modules + mariadb + valkey,
+UI at **https://localhost:8447** (`admin@sybsec.local` / `changeme_misp`,
+self-signed). On the host the HTTP/HTTPS ports are 8087/8447 (8081/8443 were
+taken by other projects).
+
+The Wazuh→MISP enrichment is coded and ready (`wazuh/integrations/custom-misp.py`
++ `misp/setup.sh`): every Wazuh alert with an IP/hash/domain queries MISP; a
+match writes a `threat_intel.misp` field that rule `100020` escalates to
+CRITICAL. **Wiring needs a MISP API key, which this MISP build (2.4.x, hashed
+`auth_keys`) only issues reliably from the UI** — Administration → Auth Keys →
+*Add authkey*. Paste that key into `misp/setup.sh` / the integration to finish
+(same pattern as the Shuffle key). Headless key creation via cake/DB resisted
+multiple approaches and is documented as a known quirk.
+
+### OpenCTI — design-only (RAM-prohibitive on this host)
+Connectors/configs exist (`opencti/connectors/`). OpenCTI brings its own ES +
+redis + minio + rabbitmq (~8 GB). This box has **0 swap and ~1 GB free RAM**;
+deploying it would OOM-kill the live SOC stack, so it stays design-only (it is a
+separate-host / Helm target — consistent with the production topology section).
+
+## Phase 7 LIVE — Caldera red-team validation (VERIFIED)
+
+Caldera deployed (http://localhost:8888, 18 stockpile adversaries). A sandcat
+agent runs on the Wazuh-monitored endpoint, and a custom ability was executed
+end to end:
+
+```
+Caldera (red) → ability "sybsec FIM tamper" (T1565.001) → runs on sybsec-endpoint-01
+   → writes /var/sybsec-watch/caldera-attack.conf
+   → Wazuh FIM rule 554 "File added" DETECTED it (attributed to the agent)
+```
+
+This is the detection-validation loop: the emulated attack was **detected** (no
+coverage gap). A technique Caldera ran that Wazuh missed would be a gap → backlog
+ticket. Adversary profile: `caldera/adversaries/sybsec-redteam-validation.json`.
+Login printed in `docker logs caldera` (red / <generated>).
+
 ## Demo kit (for showing it off)
 
 - `scripts/demo.sh {bruteforce|fim|webattack|sudo|anomaly|suricata|all}` — fires

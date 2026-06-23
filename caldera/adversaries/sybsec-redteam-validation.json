@@ -1,0 +1,8 @@
+{
+  "id": "38af2e61-778c-44b9-ac12-f4ceccf7107f",
+  "name": "sybsec Red Team Validation",
+  "description": "FIM tamper + discovery",
+  "atomic_ordering": [
+    "667114cd-6da1-4c8b-9178-1f912c6de173"
+  ]
+}
