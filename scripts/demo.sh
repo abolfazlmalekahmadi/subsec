@@ -32,7 +32,8 @@ scn_bruteforce() {
       sleep 1
     done'
   ok "Done. Watch Wazuh WUI -> Security events: rule 5710 x N -> 5712 -> 100010 (sybsec)."
-  ok "MITRE: T1110. Also lands in central ES security-wazuh-* (Kibana/Grafana)."
+  ok "MITRE: T1110. AUTOMATED RESPONSE: IP added to firewall blocklist + TheHive case."
+  ok "Verify the block with:  ./scripts/demo.sh blocklist"
 }
 
 scn_fim() {
@@ -105,8 +106,17 @@ scn_reset() {
   ok "Done. (Existing TheHive cases / ES docs are kept — delete in their UIs if needed.)"
 }
 
+scn_blocklist() {
+  log "Firewall blocklist (IPs auto-blocked by the brute-force response):"
+  docker exec "${WAZUH_MGR}" sh -c 'cat /var/ossec/etc/lists/sybsec-blocklist 2>/dev/null' || echo "  (empty)"
+  echo
+  log "Active-response log (last blocks):"
+  docker exec "${WAZUH_MGR}" sh -c 'grep sybsec-blocklist /var/ossec/logs/active-responses.log | tail -5' 2>/dev/null || true
+}
+
 case "${1:-}" in
   preflight)  scn_preflight;;
+  blocklist)  scn_blocklist;;
   bruteforce) scn_bruteforce;;
   fim)        scn_fim;;
   webattack)  scn_webattack;;

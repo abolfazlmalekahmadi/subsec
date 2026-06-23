@@ -189,6 +189,25 @@ into the running container — never committed).
 ### Still design-only in Phase 3
 - Shuffle **playbook wiring** (import the 4 JSON workflows, bind app-IDs,
   webhook from Wazuh) — Shuffle is up but the visual workflows aren't bound yet.
-  The direct Wazuh→TheHive path already proves the alert→case outcome.
+  This Shuffle build doesn't provision an API key headlessly, so the
+  webhook/workflow is wired in the UI — exact steps in `docs/soar.md`.
 - Cortex analyzers need real API keys (VirusTotal/AbuseIPDB/etc.) entered in the
   Cortex UI before they run.
+
+## Automated response LIVE (Wazuh-native SOAR) — VERIFIED
+
+A confirmed brute force now drives a fully automated **detect → respond** loop:
+
+```
+rule 100010  ├─ active-response sybsec-blocklist → source IP → firewall blocklist
+             └─ integration custom-thehive       → TheHive case (HIGH)
+```
+
+Verified: `192.0.2.99` → blocklist entry + new case, no analyst action. The
+`<active-response>` + `<integration>` blocks are in the mounted manager config
+(persist across restart); the TheHive key is injected at deploy time (placeholder
+in git). See `docs/soar.md`, `./scripts/demo.sh blocklist`.
+
+Constraint note: containers lack `NET_ADMIN`, so the block is a verifiable
+firewall **blocklist file** (pfSense/iptables-alias stand-in) rather than a live
+iptables DROP; swap `sybsec-blocklist` for `firewall-drop`/pfSense API in prod.

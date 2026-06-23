@@ -93,23 +93,19 @@ wire_thehive() {
   case "$KEY" in *NotFound*|"") ok "thehive key: reuse existing (set manually if blank)";; *) ok "thehive service key issued";; esac
 
   docker network connect single-node_default sybsec-thehive 2>/dev/null || true
+  # Install integration + active-response scripts (the <integration> and
+  # <active-response> blocks themselves live in the mounted manager config).
   docker cp wazuh/integrations/custom-thehive.py single-node-wazuh.manager-1:/var/ossec/integrations/custom-thehive.py
   docker cp wazuh/integrations/custom-thehive   single-node-wazuh.manager-1:/var/ossec/integrations/custom-thehive
-  docker exec single-node-wazuh.manager-1 sh -c 'chown root:wazuh /var/ossec/integrations/custom-thehive*; chmod 750 /var/ossec/integrations/custom-thehive*'
+  docker cp wazuh/active-response/sybsec-blocklist.sh single-node-wazuh.manager-1:/var/ossec/active-response/bin/sybsec-blocklist
+  docker exec single-node-wazuh.manager-1 sh -c 'chown root:wazuh /var/ossec/integrations/custom-thehive* /var/ossec/active-response/bin/sybsec-blocklist; chmod 750 /var/ossec/integrations/custom-thehive* /var/ossec/active-response/bin/sybsec-blocklist'
 
   if [ -n "${KEY}" ] && [ "${KEY#*NotFound}" = "${KEY}" ]; then
-    docker exec single-node-wazuh.manager-1 python3 - "$KEY" <<'PYEOF' || true
-import sys,re
-key=sys.argv[1]; p='/var/ossec/etc/ossec.conf'; s=open(p).read()
-block='  <integration>\n    <name>custom-thehive</name>\n    <hook_url>http://sybsec-thehive:9000</hook_url>\n    <api_key>%s</api_key>\n    <rule_id>100002,100010,100011,100040,100051</rule_id>\n    <alert_format>json</alert_format>\n  </integration>\n'%key
-if 'custom-thehive' not in s:
-    i=s.rfind('</ossec_config>'); s=s[:i]+block+s[i:]
-else:
-    s=re.sub(r'<api_key>.*?</api_key>','<api_key>%s</api_key>'%key,s,count=1)
-open(p,'w').write(s)
-PYEOF
+    # Replace the committed __THEHIVE_API_KEY__ placeholder with the real key
+    # (sed is robust to '+' and other chars that broke string-formatting paths).
+    docker exec single-node-wazuh.manager-1 sh -c "sed -i 's|__THEHIVE_API_KEY__|${KEY}|g' /var/ossec/etc/ossec.conf"
     docker exec single-node-wazuh.manager-1 /var/ossec/bin/wazuh-control restart >/dev/null 2>&1 || true
-    ok "Wazuh->TheHive integration wired + manager reloaded"
+    ok "Wazuh->TheHive case + auto-block (rule 100010) wired + manager reloaded"
   fi
 }
 
