@@ -56,7 +56,7 @@ services:
       misp-db: { condition: service_healthy }
       misp-redis: { condition: service_healthy }
     environment:
-      - BASE_URL=https://localhost:8447
+      - BASE_URL=${MISP_BASE_URL:-https://localhost:8447}
       - ADMIN_EMAIL=${MISP_ADMIN_EMAIL:-admin@sybsec.local}
       - ADMIN_PASSWORD=${MISP_ADMIN_PASSWORD:-changeme_misp}
       - ADMIN_KEY=${MISP_API_KEY:-}
