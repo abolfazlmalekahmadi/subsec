@@ -141,20 +141,27 @@ Added `restart: unless-stopped` to all core services (Logstash had exited).
 
 ## Phase 4 — Threat Intelligence
 
-### MISP — DEPLOYED (UI live); Wazuh→MISP lookup ready
-MISP is up (`misp/docker-compose.yml`): misp-core + modules + mariadb + valkey,
-UI at **https://localhost:8447** (`admin@sybsec.local` / `changeme_misp`,
-self-signed). On the host the HTTP/HTTPS ports are 8087/8447 (8081/8443 were
-taken by other projects).
+### MISP — DEPLOYED + Wazuh→MISP enrichment VERIFIED LIVE
+MISP 2.5.42 is up (`misp/docker-compose.yml`): misp-core + modules + mariadb +
+valkey, UI at **http://localhost:8087** (`admin@sybsec.local`). Verified
+end-to-end:
 
-The Wazuh→MISP enrichment is coded and ready (`wazuh/integrations/custom-misp.py`
-+ `misp/setup.sh`): every Wazuh alert with an IP/hash/domain queries MISP; a
-match writes a `threat_intel.misp` field that rule `100020` escalates to
-CRITICAL. **Wiring needs a MISP API key, which this MISP build (2.4.x, hashed
-`auth_keys`) only issues reliably from the UI** — Administration → Auth Keys →
-*Add authkey*. Paste that key into `misp/setup.sh` / the integration to finish
-(same pattern as the Shuffle key). Headless key creation via cake/DB resisted
-multiple approaches and is documented as a known quirk.
+```
+SSH auth failure from a MISP-listed bad IP (203.0.113.66) → Wazuh 5710 →
+   custom-misp integration → MISP restSearch MATCH → threat_intel.misp field →
+   Wazuh rule 100020 "MISP IoC match — auto-escalate CRITICAL"
+```
+
+**Root cause of the long CSRF/auth fight (documented for reproducibility):** the
+misp-docker image's `php.ini` points PHP sessions at `redis:6379?auth=redispassword`,
+but our redis is `misp-redis` with no such password — so **sessions never
+persisted**, breaking CSRF for everyone, and API keys couldn't validate. Fixes
+applied (runtime; fold into a fresh deploy via `scripts/wire-misp.sh`):
+1. PHP-FPM `session.save_handler=files` + a writable `save_path` (or point it at
+   the real redis), 2. `session.cookie_secure=false` for HTTP access,
+3. serve MISP over plain HTTP (disable the forced HTTPS redirect),
+4. `advanced_authkeys=true` so UI-created `auth_keys` validate. Then a key is
+created via the UI/session flow and the integration is wired.
 
 ### OpenCTI — design-only (RAM-prohibitive on this host)
 Connectors/configs exist (`opencti/connectors/`). OpenCTI brings its own ES +
