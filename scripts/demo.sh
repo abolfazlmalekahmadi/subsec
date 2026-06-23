@@ -107,11 +107,13 @@ scn_reset() {
 }
 
 scn_blocklist() {
-  log "Firewall blocklist (IPs auto-blocked by the brute-force response):"
+  log "Wazuh-native blocklist (auto-response on rule 100010):"
   docker exec "${WAZUH_MGR}" sh -c 'cat /var/ossec/etc/lists/sybsec-blocklist 2>/dev/null' || echo "  (empty)"
   echo
-  log "Active-response log (last blocks):"
-  docker exec "${WAZUH_MGR}" sh -c 'grep sybsec-blocklist /var/ossec/logs/active-responses.log | tail -5' 2>/dev/null || true
+  log "firewall-api blocklist (blocked by the Shuffle SOAR workflow):"
+  curl -s http://localhost:8099/blocklist 2>/dev/null | python3 -c 'import sys,json
+d=json.load(sys.stdin); print("  count:",d["count"])
+for b in d["blocked"][-8:]: print("   ",b["ip"],"-",b["reason"],"@",b["at"])' 2>/dev/null || echo "  (firewall-api not reachable)"
 }
 
 case "${1:-}" in

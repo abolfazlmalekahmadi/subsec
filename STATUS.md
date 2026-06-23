@@ -186,10 +186,12 @@ Integration: `wazuh/integrations/custom-thehive{,.py}` + an `<integration>` bloc
 (committed with the `__THEHIVE_API_KEY__` placeholder; real key injected only
 into the running container — never committed).
 
-### Phase 3 SOAR — Shuffle WIRED end-to-end (verified)
-Real brute force → Wazuh 100010 → **Shuffle webhook → PB2 workflow → TheHive
-`[SOAR]` case**, verified live (Shuffle execution + case created). Workflow
-export: `shuffle/playbooks/pb2_bruteforce_shuffle.json`; reproduce with
+### Phase 3 SOAR — Shuffle WIRED end-to-end, 4-node pipeline (verified)
+Real brute force → Wazuh 100010 → **Shuffle webhook → PB2 workflow** with 4 nodes:
+`geoip enrich (ip-api) → block (firewall-api) → enriched TheHive [SOAR] case →
+notify`. Verified live (`45.33.32.156`): all nodes SUCCESS, firewall-api block,
+geo-titled case. New `services/firewall-api` (`:8099`) is the block target.
+Workflow export: `shuffle/playbooks/pb2_bruteforce_shuffle.json`; reproduce with
 `./scripts/wire-shuffle.sh <apikey>`. The Shuffle API key is generated once in
 the UI (this build won't provision it headlessly); webhook id + host IP are
 env-specific and injected at wire time. See `docs/soar.md`.

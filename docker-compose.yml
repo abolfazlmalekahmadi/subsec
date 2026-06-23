@@ -32,6 +32,7 @@ volumes:
   ml-models:
   wazuh-indexer-data:
   wazuh-manager-data:
+  firewall-data:
 
 services:
   # --- Layer 2: storage / indexing ------------------------------------------
@@ -192,6 +193,21 @@ services:
       timeout: 10s
       retries: 15
       start_period: 30s
+
+  # --- Layer 6: firewall-api (SOAR block target / pfSense-alias stand-in) ----
+  firewall-api:
+    build: ./services/firewall-api
+    image: sybsec/firewall-api:1.0.0
+    container_name: sybsec-firewall-api
+    restart: unless-stopped
+    environment:
+      - FW_BLOCKLIST=/data/blocklist.json
+    volumes:
+      - firewall-data:/data
+    ports:
+      - "${FIREWALL_API_PORT:-8099}:8099"
+    networks: [sybsec]
+    logging: *default-logging
 
   # --- Layer 1: network IDS sensor ------------------------------------------
   # Reads from the host's interface (AF_PACKET). In a real deployment this NIC

@@ -26,24 +26,34 @@ Wazuh's active-response + integrator engine.
   `__THEHIVE_API_KEY__` placeholder and is injected at deploy time by
   `scripts/deploy-all.sh` (never committed).
 
-## Shuffle (visual SOAR) — WIRED & verified
+## Shuffle (visual SOAR) — WIRED & verified (4-node pipeline)
 
-The brute-force path is also wired through Shuffle as the orchestrator and
-verified end to end:
+The brute-force path runs through a real multi-stage Shuffle workflow, verified
+end to end against live attacks:
 
 ```
 SSH brute force → Wazuh 100010 → (shuffle integration) → Shuffle webhook
-   → workflow "PB2 — Brute Force" → HTTP node → TheHive case ([SOAR], tag soar)
+   → PB2 — Brute Force Response
+        1. geoip   (HTTP GET ip-api.com)      → country / city / ISP / ASN of the attacker
+        2. block   (HTTP POST firewall-api)   → source IP added to the blocklist
+        3. case    (HTTP POST TheHive)        → enriched [SOAR] case (geo + block status)
+        4. notify  (Shuffle Tools)            → SOC summary line
 ```
 
-Verified live: real attack → Shuffle execution + a `[SOAR]`-titled TheHive case.
-The workflow runs are visible in the Shuffle UI (Workflows → PB2 → Executions).
+Verified live (`45.33.32.156`): Shuffle execution with all 4 nodes SUCCESS,
+firewall-api block, and a `[SOAR]` TheHive case titled with the attacker's
+country. Runs are visible in the Shuffle UI (Workflows → PB2 → Executions) —
+click any node to see its input/output.
 
+- **firewall-api** (`services/firewall-api/`, host `:8099`) is the block target —
+  a pfSense/iptables-alias stand-in the demo can verify (`GET /blocklist`).
 - Workflow export: `shuffle/playbooks/pb2_bruteforce_shuffle.json` (sanitized —
-  `__THEHIVE_API_KEY__` and `__HOST_IP__` placeholders).
-- Reproduce the wiring with `./scripts/wire-shuffle.sh <SHUFFLE_APIKEY>` (it
-  imports the workflow, creates+starts the webhook, connects the manager to the
-  Shuffle network, and registers the Wazuh `shuffle` integration).
+  `__THEHIVE_API_KEY__` / `__HOST_IP__` placeholders).
+- Reproduce the wiring with `./scripts/wire-shuffle.sh <SHUFFLE_APIKEY>` (imports
+  the workflow, creates+starts the webhook, joins the Shuffle network, registers
+  the Wazuh `shuffle` integration).
+- GeoIP uses the free no-key `ip-api.com`; swap in Cortex/AbuseIPDB for richer
+  reputation by adding a node before `case`.
 
 ### Why a few values are environment-specific
 - **Shuffle API key** — this Shuffle build requires a ≥36-char (UUID) key and
