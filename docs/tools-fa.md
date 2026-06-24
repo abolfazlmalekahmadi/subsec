@@ -165,6 +165,15 @@ endpointها/شبکه ──► Wazuh agent / Suricata ──► Kafka ──►
 
 ---
 
+## 🎬 سناریوی بزرگ — زنجیره‌ی کامل حمله (همه‌ی سرویس‌ها)
+
+```bash
+./scripts/scenario-apt.sh
+```
+یه حمله‌ی APT چندمرحله‌ای که **همه‌ی لایه‌ها** رو با هم درگیر می‌کنه و هرکدوم رو زنده تأیید می‌کنه:
+شناسایی (Suricata) → دسترسی اولیه (Wazuh brute force) → هوش تهدید (MISP → CRITICAL) →
+استقرار (Caldera → FIM) → استخراج داده (ML anomaly) → پاسخ خودکار (Shuffle: بلاک + case) → اعتبارسنجی.
+
 ## فرمان‌های مفید دمو
 
 ```bash
